@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ball Drop Game</title>
+
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #282c34;
+            text-align: center;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+
+        h1 {
+            margin: 15px 0;
+            font-size: 40px;
+        }
+
+        #scoreboard {
+            display: flex;
+            justify-content: space-around;
+            margin: 10px 0;
+            font-size: 18px;
+            color: #ffd700;
+        }
+
+        #game {
+            width: 400px;
+            height: 500px;
+            border: 3px solid #ff6f61;
+            border-radius: 15px;
+            margin: 20px auto;
+            overflow: hidden;
+            position: relative;
+            background-color: #ffffff;
+        }
+
+        #character {
+            width: 20px;
+            height: 20px;
+            background-color: red;
+            border-radius: 50%;
+            position: absolute;
+            top: 400px;
+            left: 190px;
+            z-index: 10;
+        }
+
+        .block {
+            width: 400px;
+            height: 20px;
+            background-color: #333;
+            position: absolute;
+        }
+
+        .hole {
+            width: 40px;
+            height: 20px;
+            background-color: #ffffff;
+            position: absolute;
+        }
+
+        #gameOver {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+        }
+
+        #gameOver h2 {
+            font-size: 30px;
+            margin-bottom: 10px;
+        }
+
+        #gameOver p {
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+
+        #resetButton {
+            padding: 10px 20px;
+            font-size: 18px;
+            color: #282c34;
+            background-color: #ffd700;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #resetButton:hover {
+            background-color: #ffc107;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Ball Drop Game</h1>
+    <div id="scoreboard">
+        <div id="score">Score: 0</div>
+        <div id="highScore">High Score: 0</div>
+    </div>
+
+    <div id="game">
+        <div id="character"></div>
+        <div id="gameOver">
+            <h2>Game Over</h2>
+            <p id="finalScore"></p>
+            <button id="resetButton">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const character = document.getElementById('character');
+        const game = document.getElementById('game');
+        const gameOverDiv = document.getElementById('gameOver');
+        const finalScore = document.getElementById('finalScore');
+        const resetButton = document.getElementById('resetButton');
+        const scoreDisplay = document.getElementById('score');
+        const highScoreDisplay = document.getElementById('highScore');
+
+        let interval;
+        let both = 0;
+        let counter = 0;
+        let score = 0;
+        let highScore = localStorage.getItem('highScore') || 0;
+        let currentBlocks = [];
+
+        highScoreDisplay.innerText = `High Score: ${highScore}`;
+
+        // Character Movement
+        function moveLeft() {
+            const left = parseInt(window.getComputedStyle(character).getPropertyValue("left"));
+            if (left > 0) character.style.left = left - 2 + "px";
+        }
+
+        function moveRight() {
+            const left = parseInt(window.getComputedStyle(character).getPropertyValue("left"));
+            if (left < 380) character.style.left = left + 2 + "px";
+        }
+
+        // Key Events
+        document.addEventListener("keydown", event => {
+            if (both === 0) {
+                both++;
+                if (event.key === "ArrowLeft") interval = setInterval(moveLeft, 1);
+                if (event.key === "ArrowRight") interval = setInterval(moveRight, 1);
+            }
+        });
+
+        document.addEventListener("keyup", () => {
+            clearInterval(interval);
+            both = 0;
+        });
+
+        // Game Logic
+        const blocks = setInterval(function () {
+            const blockLast = document.getElementById("block" + (counter - 1));
+            const holeLast = document.getElementById("hole" + (counter - 1));
+            const blockLastTop = blockLast ? parseInt(window.getComputedStyle(blockLast).getPropertyValue("top")) : 0;
+
+            if (blockLastTop < 400 || counter === 0) {
+                const block = document.createElement("div");
+                const hole = document.createElement("div");
+                block.className = "block";
+                hole.className = "hole";
+                block.id = "block" + counter;
+                hole.id = "hole" + counter;
+
+                block.style.top = blockLastTop + 100 + "px";
+                hole.style.top = blockLastTop + 100 + "px";
+                hole.style.left = Math.floor(Math.random() * 360) + "px";
+
+                game.appendChild(block);
+                game.appendChild(hole);
+                currentBlocks.push(counter);
+                counter++;
+            }
+
+            const characterTop = parseInt(window.getComputedStyle(character).getPropertyValue("top"));
+            const characterLeft = parseInt(window.getComputedStyle(character).getPropertyValue("left"));
+            let drop = 0;
+
+            if (characterTop <= 0) {
+                endGame();
+            }
+
+            for (const current of currentBlocks) {
+                const iBlock = document.getElementById("block" + current);
+                const iHole = document.getElementById("hole" + current);
+                const iblockTop = parseFloat(window.getComputedStyle(iBlock).getPropertyValue("top"));
+                const iholeLeft = parseFloat(window.getComputedStyle(iHole).getPropertyValue("left"));
+
+                iBlock.style.top = iblockTop - 0.5 + "px";
+                iHole.style.top = iblockTop - 0.5 + "px";
+
+                if (iblockTop < -20) {
+                    currentBlocks.shift();
+                    iBlock.remove();
+                    iHole.remove();
+                }
+
+                // Check if the character dropped through the hole
+                if (iblockTop - 20 < characterTop && iblockTop > characterTop) {
+                    drop++;
+                    if (iholeLeft <= characterLeft && iholeLeft + 40 >= characterLeft) {
+                        drop = 0;
+                        score++; // Increment score only on a successful drop
+                        scoreDisplay.innerText = `Score: ${score}`;
+                    }
+                }
+            }
+
+            if (drop === 0 && characterTop < 480) character.style.top = characterTop + 2 + "px";
+            else character.style.top = characterTop - 0.5 + "px";
+        }, 1);
+
+        function endGame() {
+            clearInterval(blocks);
+            gameOverDiv.style.display = "flex";
+            finalScore.innerText = `Your Score: ${score}`;
+
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('highScore', highScore);
+                highScoreDisplay.innerText = `High Score: ${highScore}`;
+            }
+        }
+
+        resetButton.addEventListener("click", () => location.reload());
+    </script>
+</body>
+
+</html>
